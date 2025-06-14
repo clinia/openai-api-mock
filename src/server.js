@@ -7,9 +7,9 @@ import { functionArgumentOverrides } from './utils/mockStore.js';
 
 // Configurable mock options
 const config = {
-  latency: parseInt(process.env.MOCK_LATENCY || '0', 10), // in ms
-  includeErrors: process.env.MOCK_ERRORS === 'true', // simulate 429s
-  logRequests: process.env.MOCK_LOG === 'true' || true, // default to true
+  latency: parseInt(process.env.MOCK_LATENCY || '0', 10),
+  includeErrors: process.env.MOCK_ERRORS === 'true',
+  logRequests: process.env.MOCK_LOG === 'true' || true,
 };
 
 const app = express();

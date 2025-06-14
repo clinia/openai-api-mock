@@ -25,6 +25,8 @@
   "scripts": {
     "build": "vite build",
     "serve": "node src/server.js",
+    "build:server": "esbuild src/server.js --bundle --platform=node --outfile=dist-server/server.js --minify --format=esm --packages=external",
+    "start:prod": "NODE_ENV=production node dist-server/server.js",
     "pretest": "npm run build",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
@@ -46,6 +48,7 @@
   "dependencies": {
     "@faker-js/faker": "^9.0.0",
     "body-parser": "^2.2.0",
+    "esbuild": "^0.25.5",
     "express": "^5.1.0",
     "nock": "^14.0.0"
   },
