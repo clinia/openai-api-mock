@@ -1,5 +1,5 @@
-import { Readable } from "node:stream";
-import { createToolCallObject } from "./utils/responseGenerators.js";
+import { Readable } from 'node:stream';
+import { createToolCallObject } from './utils/responseGenerators.js';
 
 export function createChatStream(requestBody) {
   const stream = new Readable({ read() {} });
@@ -13,9 +13,9 @@ export function createChatStream(requestBody) {
     // Break tool call into realistic streaming chunks
     const baseChunk = {
       id: `chatcmpl-${created}`,
-      object: "chat.completion.chunk",
+      object: 'chat.completion.chunk',
       created,
-      model: "gpt-3.5-mock",
+      model: 'gpt-3.5-mock',
       system_fingerprint: null,
       choices: [
         {
@@ -78,19 +78,19 @@ export function createChatStream(requestBody) {
         {
           index: 0,
           delta: {},
-          finish_reason: "tool_calls",
+          finish_reason: 'tool_calls',
         },
       ],
     });
   } else {
     // Normal content streaming fallback
-    const words = ["Here's ", "a ", "response."];
+    const words = ["Here's ", 'a ', 'response.'];
     for (const word of words) {
       chunks.push({
         id: `chatcmpl-${created}`,
-        object: "chat.completion.chunk",
+        object: 'chat.completion.chunk',
         created,
-        model: "gpt-3.5-mock",
+        model: 'gpt-3.5-mock',
         choices: [
           {
             index: 0,
@@ -102,14 +102,14 @@ export function createChatStream(requestBody) {
     }
     chunks.push({
       id: `chatcmpl-${created}`,
-      object: "chat.completion.chunk",
+      object: 'chat.completion.chunk',
       created,
-      model: "gpt-3.5-mock",
+      model: 'gpt-3.5-mock',
       choices: [
         {
           index: 0,
           delta: {},
-          finish_reason: "stop",
+          finish_reason: 'stop',
         },
       ],
     });
