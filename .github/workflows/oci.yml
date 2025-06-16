@@ -1,0 +1,152 @@
+name: Build containers
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+
+env:
+  OPENAI_MOCK_IMAGE: ghcr.io/clinia/openai-api-mock
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        arch:
+          - {
+              runs-on: warp-ubuntu-latest-x64-4x,
+              platform: linux/amd64,
+              platform-short: amd64,
+            }
+          - {
+              runs-on: warp-ubuntu-latest-arm64-8x,
+              platform: linux/arm64,
+              platform-short: arm64,
+            }
+
+    name: Build - ${{matrix.arch.platform}}
+    runs-on: ${{matrix.arch.runs-on}}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.OPENAI_MOCK_IMAGE }}
+          tags: |
+            type=edge
+            type=sha,event=branch,prefix=edge-,suffix=-{{date 'YYYYMMDDHHmmss'}},format=short
+            type=semver,pattern={{version}}
+      - name: Login to Clinia Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: oci.clinia.dev
+          username: ${{ secrets.CLINIA_HARBOR_USER }}
+          password: ${{ secrets.CLINIA_HARBOR_PASSWORD }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          # The following allows our builder to use our harbor cache for the buildx container itself
+          driver-opts: image=oci.clinia.dev/dh/moby/buildkit:buildx-stable-1
+
+      - name: Login to Github Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          platforms: ${{ matrix.arch.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.OPENAI_MOCK_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          secrets: |
+            "npm_token=${{ secrets.CLINIA_CI_GITHUB_TOKEN }}"
+          cache-from: type=registry,ref=user/app:latest
+          cache-to: type=inline
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.16.0
+        #  Only run on linux/amd64 as it's the only supported platform for now
+        if: matrix.arch.platform == 'linux/amd64'
+        with:
+          image-ref: ${{ env.OPENAI_MOCK_IMAGE}}@${{ steps.build.outputs.digest }}
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
+        env:
+          TRIVY_USERNAME: ${{ github.actor }},${{ secrets.CLINIA_HARBOR_USER }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }},${{ secrets.CLINIA_HARBOR_PASSWORD }}
+          TRIVY_DB_REPOSITORY: oci.clinia.dev/ghcr/aquasecurity/trivy-db
+          TRIVY_SERVER: https://trivy.dev.clinia.com
+          TRIVY_TOKEN: ${{ secrets.TRIVY_TOKEN }}
+      - name: Export digest
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        if: ${{ github.event_name == 'push' }}
+        with:
+          name: digests-${{matrix.arch.platform-short}}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    if: ${{ github.event_name == 'push' }}
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digests*
+          path: /tmp/digests
+          merge-multiple: true
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.OPENAI_MOCK_IMAGE }}
+          tags: |
+            type=edge
+            type=sha,event=branch,prefix=edge-,suffix=-{{date 'YYYYMMDDHHmmss'}},format=short
+            type=semver,pattern={{version}}
+      - name: Login to Github Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Clinia Harbor
+        uses: docker/login-action@v3
+        with:
+          registry: oci.clinia.dev
+          username: ${{ secrets.CLINIA_HARBOR_USER }}
+          password: ${{ secrets.CLINIA_HARBOR_PASSWORD }}
+      - name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.OPENAI_MOCK_IMAGE }}@sha256:%s ' *)
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.OPENAI_MOCK_IMAGE }}:${{ steps.meta.outputs.version }}
