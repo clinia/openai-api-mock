@@ -1,18 +1,19 @@
 name: PR CI
-# concurrency:
-#   group: ${{ github.workflow }}-${{ github.ref }}
-#   cancel-in-progress: true
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 on:
   pull_request:
+  merge_group:
 
 jobs:
   ci:
     runs-on: warp-ubuntu-latest-x64-8x
-    # permissions:
-    #   contents: read
-    #   pull-requests: read
-    #   checks: write
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
