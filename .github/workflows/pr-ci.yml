@@ -9,7 +9,7 @@ on:
 
 jobs:
   ci:
-    runs-on: warp-ubuntu-latest-x64-8x
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: read
