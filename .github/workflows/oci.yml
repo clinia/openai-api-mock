@@ -17,8 +17,7 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Build - ${{matrix.arch.platform}}
-    runs-on: ${{matrix.arch.runs-on}}
+    name: Build
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,7 +50,6 @@ jobs:
         with:
           context: .
           file: Dockerfile
-          platforms: ${{ matrix.arch.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.OPENAI_MOCK_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           secrets: |
