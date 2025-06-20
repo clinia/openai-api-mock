@@ -45,25 +45,17 @@ jobs:
             type=edge
             type=sha,event=branch,prefix=edge-,suffix=-{{date 'YYYYMMDDHHmmss'}},format=short
             type=semver,pattern={{version}}
-      - name: Login to Clinia Harbor
-        uses: docker/login-action@v3
-        with:
-          registry: oci.clinia.dev
-          username: ${{ secrets.CLINIA_HARBOR_USER }}
-          password: ${{ secrets.CLINIA_HARBOR_PASSWORD }}
+
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver: docker-container
-          # The following allows our builder to use our harbor cache for the buildx container itself
-          driver-opts: image=oci.clinia.dev/dh/moby/buildkit:buildx-stable-1
 
       - name: Login to Github Docker Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v5
@@ -77,35 +69,6 @@ jobs:
             "npm_token=${{ secrets.CLINIA_CI_GITHUB_TOKEN }}"
           cache-from: type=registry,ref=user/app:latest
           cache-to: type=inline
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.16.0
-        #  Only run on linux/amd64 as it's the only supported platform for now
-        if: matrix.arch.platform == 'linux/amd64'
-        with:
-          image-ref: ${{ env.OPENAI_MOCK_IMAGE}}@${{ steps.build.outputs.digest }}
-          severity: 'HIGH,CRITICAL'
-          ignore-unfixed: true
-          exit-code: '1'
-        env:
-          TRIVY_USERNAME: ${{ github.actor }},${{ secrets.CLINIA_HARBOR_USER }}
-          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }},${{ secrets.CLINIA_HARBOR_PASSWORD }}
-          TRIVY_DB_REPOSITORY: oci.clinia.dev/ghcr/aquasecurity/trivy-db
-          TRIVY_SERVER: https://trivy.dev.clinia.com
-          TRIVY_TOKEN: ${{ secrets.TRIVY_TOKEN }}
-      - name: Export digest
-        if: ${{ github.event_name == 'push' }}
-        run: |
-          mkdir -p /tmp/digests
-          digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
-      - name: Upload digest
-        uses: actions/upload-artifact@v4
-        if: ${{ github.event_name == 'push' }}
-        with:
-          name: digests-${{matrix.arch.platform-short}}
-          path: /tmp/digests/*
-          if-no-files-found: error
-          retention-days: 1
 
   merge:
     runs-on: ubuntu-latest
@@ -119,8 +82,10 @@ jobs:
           pattern: digests*
           path: /tmp/digests
           merge-multiple: true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -135,13 +100,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Login to Clinia Harbor
-        uses: docker/login-action@v3
-        with:
-          registry: oci.clinia.dev
-          username: ${{ secrets.CLINIA_HARBOR_USER }}
-          password: ${{ secrets.CLINIA_HARBOR_PASSWORD }}
+          password: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |

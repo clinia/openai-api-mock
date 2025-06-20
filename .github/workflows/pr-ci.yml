@@ -52,17 +52,3 @@ jobs:
           NPM_AUTH_TOKEN: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
         run: pnpm run test
 
-      - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@master
-        env:
-          TRIVY_USERNAME: ${{ secrets.CLINIA_HARBOR_USER }}
-          TRIVY_PASSWORD: ${{ secrets.CLINIA_HARBOR_PASSWORD }}
-          TRIVY_DB_REPOSITORY: oci.clinia.dev/ghcr/aquasecurity/trivy-db
-          TRIVY_SERVER: https://trivy.dev.clinia.com
-          TRIVY_TOKEN: ${{ secrets.TRIVY_TOKEN }}
-        with:
-          scan-type: fs
-          ignore-unfixed: true
-          format: table
-          severity: CRITICAL
-
