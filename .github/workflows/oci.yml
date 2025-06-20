@@ -101,6 +101,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
+          tags: ${{ steps.prep.outputs.tags }}
           outputs: type=image,name=${{ env.OPENAI_MOCK_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           secrets: |
             "npm_token=${{ secrets.CLINIA_CI_GITHUB_TOKEN }}"
