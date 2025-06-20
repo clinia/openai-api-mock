@@ -13,20 +13,9 @@ env:
 
 jobs:
   build:
+    runs-on: warp-ubuntu-latest-x64-8x
     strategy:
       fail-fast: true
-      matrix:
-        arch:
-          - {
-              runs-on: warp-ubuntu-latest-x64-4x,
-              platform: linux/amd64,
-              platform-short: amd64,
-            }
-          - {
-              runs-on: warp-ubuntu-latest-arm64-8x,
-              platform: linux/arm64,
-              platform-short: arm64,
-            }
 
     name: Build - ${{matrix.arch.platform}}
     runs-on: ${{matrix.arch.runs-on}}
