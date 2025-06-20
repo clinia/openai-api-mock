@@ -1,6 +1,13 @@
-import { faker } from '@faker-js/faker';
+import { faker } from "@faker-js/faker";
+import { functionArgumentOverrides } from "./mockStore.js";
 
 export function generateToolCallArguments(requestBody) {
+  const fnName = requestBody.tools[0].function.name;
+
+  if (functionArgumentOverrides.has(fnName)) {
+    return JSON.stringify(functionArgumentOverrides.get(fnName), null, 2);
+  }
+
   const { parameters } = requestBody.tools[0].function;
   const argumentsObject = {};
 
@@ -8,7 +15,7 @@ export function generateToolCallArguments(requestBody) {
     argumentsObject[paramName] = generateFakeData(
       paramDetails.type,
       paramDetails,
-      paramName
+      paramName,
     );
   });
 
@@ -23,7 +30,7 @@ export function generateFunctionCallArguments(requestBody) {
     argumentsObject[paramName] = generateFakeData(
       paramDetails.type,
       paramDetails,
-      paramName
+      paramName,
     );
   });
 
@@ -62,7 +69,11 @@ export function generateFakeArray(properties) {
 export function generateFakeObject(properties) {
   const itemObject = {};
   Object.entries(properties.properties).forEach(([itemName, itemDetails]) => {
-    itemObject[itemName] = generateFakeData(itemDetails.type, itemDetails, itemName);
+    itemObject[itemName] = generateFakeData(
+      itemDetails.type,
+      itemDetails,
+      itemName,
+    );
   });
   return itemObject;
 }

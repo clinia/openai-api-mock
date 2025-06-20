@@ -1,0 +1,54 @@
+name: PR CI
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+  merge_group:
+
+jobs:
+  ci:
+    runs-on: warp-ubuntu-latest-x64-8x
+    permissions:
+      contents: read
+      pull-requests: read
+      checks: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - uses: buildjet/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@clinia'
+          token: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
+
+      - name: Setup pnpm configs
+        run: |
+          pnpm config set npmScopes.clinia.npmRegistryServer "https://npm.pkg.github.com"
+          pnpm config set npmScopes.clinia.npmAlwaysAuth true
+          pnpm config set npmScopes.clinia.npmAuthToken $NPM_AUTH_TOKEN
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
+
+      - name: Install node modules
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
+        run: pnpm install
+
+      - name: Build
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
+        run: pnpm run build
+
+      - name: Tests
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.CLINIA_CI_GITHUB_TOKEN }}
+        run: pnpm run test
+
