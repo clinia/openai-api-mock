@@ -13,7 +13,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04-arm
     strategy:
       fail-fast: true
 
@@ -58,7 +58,7 @@ jobs:
           cache-to: type=inline
 
   merge:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04-arm
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
