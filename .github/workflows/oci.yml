@@ -49,6 +49,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
+          platforms: linux/amd64,linux/arm64/v8
           file: Dockerfile
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.OPENAI_MOCK_IMAGE }},push-by-digest=true,name-canonical=true,push=true
@@ -98,6 +99,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           builder: ${{ steps.buildx.outputs.name }}
+          platforms: linux/amd64,linux/arm64/v8
           context: .
           file: Dockerfile
           push: true
